@@ -60,7 +60,8 @@ body.play-mode .turn>select{flex-shrink:0;padding:8px}
 let eveningMemory={},storageAvailable=true;
 function readEvening(){try{const raw=localStorage.getItem(EVENING_KEY);const value=raw?JSON.parse(raw):{};if(value&&typeof value==='object'&&!Array.isArray(value)){eveningMemory=Object.fromEntries(Object.entries(value).filter(([k,v])=>['imposter','scharade','tabu','quiz','werbinich'].includes(k)&&Array.isArray(v)).map(([k,v])=>[k,v.filter(x=>typeof x==='string')]));storageAvailable=true}}catch{storageAvailable=false}return eveningMemory}
 function writeEvening(value){eveningMemory=value;try{localStorage.setItem(EVENING_KEY,JSON.stringify(value));storageAvailable=true}catch{storageAvailable=false}}
-function resetEvening(){writeEvening({})}
+const FAMILY_READY_KEY='familienabend:family-ready:v1';
+function resetEvening(){writeEvening({});try{localStorage.setItem(FAMILY_READY_KEY,'pending')}catch{}}
 
 const ART_INDEX={imposter:0,scharade:1,tabu:2,quiz:3,werbinich:4,dice:5};
 function art(index,extra=''){return `<span class="art art-${index} ${extra}" aria-hidden="true"></span>`}
@@ -98,11 +99,15 @@ $('count').value=Math.max(2,setupNames.length);hubNames();
 $('plus').onclick=()=>{$('count').value=Number($('count').value)+1;hubNames();savePlayers()};
 $('minus').onclick=()=>{$('count').value=Math.max(2,Number($('count').value)-1);hubNames();savePlayers()};
 $('count').onchange=()=>{hubNames();savePlayers()};
-$('familyForm').onsubmit=event=>{event.preventDefault();savePlayers();const names=[...$('names').querySelectorAll('input')].map(e=>e.value.trim());if(names.some(n=>!n)||new Set(names.map(n=>n.toLocaleLowerCase())).size!==names.length){$('familyError').innerHTML=bi('Bitte unterschiedliche Namen eintragen.','اكتبوا أسماء مختلفة.');return}if(!readLastPlayers().length)rememberParticipants();$('familySetup').classList.add('hidden');$('gameSelection').classList.remove('hidden');window.scrollTo(0,0)};
+$('familyForm').onsubmit=event=>{event.preventDefault();savePlayers();const names=[...$('names').querySelectorAll('input')].map(e=>e.value.trim());if(names.some(n=>!n)||new Set(names.map(n=>n.toLocaleLowerCase())).size!==names.length){$('familyError').innerHTML=bi('Bitte unterschiedliche Namen eintragen.','اكتبوا أسماء مختلفة.');return}if(!readLastPlayers().length)rememberParticipants();try{localStorage.setItem(FAMILY_READY_KEY,'ready')}catch{}$('familySetup').classList.add('hidden');$('gameSelection').classList.remove('hidden');window.scrollTo(0,0)};
 $('editFamily').onclick=()=>{$('gameSelection').classList.add('hidden');$('familySetup').classList.remove('hidden');window.scrollTo(0,0)};
 document.addEventListener('keydown',event=>{if(event.key!=='Enter'||event.isComposing||!event.target.matches('#names input'))return;event.preventDefault();const fields=[...$('names').querySelectorAll('input')],next=fields[fields.indexOf(event.target)+1];if(next)next.focus();else event.target.blur()});
 function hubKeyboardHints(){const fields=[...$('names').querySelectorAll('input')];fields.forEach((input,i)=>input.enterKeyHint=i===fields.length-1?'done':'next')}
 new MutationObserver(hubKeyboardHints).observe($('names'),{childList:true});hubKeyboardHints();
-$('resetEvening').onclick=()=>{resetEvening();$('resetStatus').textContent='Wortverlauf gelöscht. Teilnehmer bleiben gespeichert. / تم مسح سجل الكلمات. تبقى قائمة المشاركين محفوظة.'};
+$('resetEvening').onclick=()=>{resetEvening();$('resetStatus').textContent='Wortverlauf gelöscht. Teilnehmer bleiben gespeichert. / تم مسح سجل الكلمات. تبقى قائمة المشاركين محفوظة.';$('editFamily').click()};
+let familyReady=false;try{familyReady=localStorage.getItem(FAMILY_READY_KEY)!=='pending'&&participantLibrary.filter(p=>p.name.trim()).length>=2}catch{}
+const editingFamily=new URLSearchParams(location.search).has('participants');
+if(editingFamily)history.replaceState(null,'',location.pathname+location.hash);
+if(familyReady&&!editingFamily){$('familySetup').classList.add('hidden');$('gameSelection').classList.remove('hidden')}
 </script></body></html>
 
